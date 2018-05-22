@@ -282,20 +282,6 @@ RUN if [ ${INSTALL_PHPREDIS} = true ]; then \
 ;fi
 
 ###########################################################################
-# Swoole EXTENSION
-###########################################################################
-
-ARG INSTALL_SWOOLE=false
-ARG PHP_VERSION=${PHP_VERSION}
-
-RUN if [ ${INSTALL_SWOOLE} = true ]; then \
-    # Install Php Swoole Extension
-    pecl -q install swoole && \
-    echo "extension=swoole.so" >> /etc/php/${PHP_VERSION}/mods-available/swoole.ini && \
-    ln -s /etc/php/${PHP_VERSION}/mods-available/swoole.ini /etc/php/${PHP_VERSION}/cli/conf.d/20-swoole.ini \
-;fi
-
-###########################################################################
 # Drush:
 ###########################################################################
 
@@ -712,6 +698,26 @@ RUN if [ ${INSTALL_DUSK_DEPS} = true ]; then \
 ;fi
 
 ###########################################################################
+# Swoole EXTENSION
+###########################################################################
+
+ARG INSTALL_SWOOLE=false
+ARG PHP_VERSION=${PHP_VERSION}
+
+RUN if [ ${INSTALL_SWOOLE} = true ]; then \
+    # Install Php Swoole Extension
+    pecl -q install swoole && \
+    echo "extension=swoole.so" >> /etc/php/${PHP_VERSION}/mods-available/swoole.ini && \
+    ln -s /etc/php/${PHP_VERSION}/mods-available/swoole.ini /etc/php/${PHP_VERSION}/cli/conf.d/20-swoole.ini \
+;fi
+
+##########################################
+# dyh supervisor
+##########################################
+RUN apt-get update -yqq &&\
+    apt-get -y install supervisor
+
+###########################################################################
 # Check PHP version:
 ###########################################################################
 
@@ -734,3 +740,14 @@ RUN apt-get clean && \
 
 # Set default work directory
 WORKDIR /var/www
+
+# composer setting
+RUN composer config -g repo.packagist composer https://packagist.phpcomposer.com && \
+    composer global require hirak/prestissimo
+
+#supervisor config
+COPY supervisord.conf /etc/supervisord.conf
+
+ENTRYPOINT ["/usr/bin/supervisord", "-n", "-c",  "/etc/supervisord.conf"]
+
+EXPOSE 9002
